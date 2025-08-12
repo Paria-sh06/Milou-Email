@@ -14,3 +14,12 @@ create table Emails(
     creation_time datetime not null,
     foreign key (sender_id) references User(userId)
 );
+
+create table Email_Recipients(
+    Id int primary key auto_increment,
+    recipient_id int not null,
+    email_id int not null,
+    is_read boolean default false,
+    foreign key (recipient_id) references User(userId),
+    foreign key (email_id) references Emails(emailId)
+);
