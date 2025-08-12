@@ -3,12 +3,12 @@ package aut.ap.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "email_recipients")
+@Table(name = "Email_Recipients")
 public class EmailRecipient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int Id;
+    private int id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "email_id", nullable = false)
@@ -24,18 +24,18 @@ public class EmailRecipient {
     public EmailRecipient() {
     }
 
-    public EmailRecipient(Email relatedEmail, User receiverUser, Boolean readStatus) {
+    public EmailRecipient(Email relatedEmail, User recipient, Boolean isRead) {
         this.relatedEmail = relatedEmail;
-        this.recipient = receiverUser;
-        this.readStatus = readStatus;
+        this.recipient = recipient;
+        this.readStatus = isRead;
     }
 
-    public int getRecipientId() {
-        return Id;
+    public int getId() {
+        return id;
     }
 
-    public void setRecipientId(int Id) {
-        this.Id = Id;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Email getRelatedEmail() {
@@ -46,14 +46,6 @@ public class EmailRecipient {
         this.relatedEmail = relatedEmail;
     }
 
-    public void setReadStatus(Boolean readStatus) {
-        this.readStatus = readStatus;
-    }
-
-    public Boolean setReadStatus() {
-        return readStatus;
-    }
-
     public User getRecipient() {
         return recipient;
     }
@@ -62,5 +54,11 @@ public class EmailRecipient {
         this.recipient = recipient;
     }
 
+    public Boolean getReadStatus() {
+        return readStatus;
+    }
 
+    public void setReadStatus(Boolean isRead) {
+        this.readStatus = isRead;
+    }
 }

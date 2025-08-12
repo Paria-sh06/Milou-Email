@@ -44,7 +44,7 @@ public class Email {
         setRecipients(to);
         setTitle(title);
         setMessageBody(messageBody);
-        setCreationTime();
+        setCreationTime(LocalDate.now());
     }
 
     @Override
@@ -84,7 +84,7 @@ public class Email {
         this.emailId = emailId;
     }
 
-    private void setUniqueCode() {
+    public void setUniqueCode() {
         final String pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         SecureRandom random = new SecureRandom();
         StringBuilder builder = new StringBuilder();
@@ -92,6 +92,13 @@ public class Email {
                 .mapToObj(pool::charAt)
                 .forEach(builder::append);
         this.uniqueCode = builder.toString();
+    }
+
+    @PrePersist
+    private void ensureUniqueCode() {
+        if (this.uniqueCode == null || this.uniqueCode.isEmpty()) {
+            setUniqueCode();
+        }
     }
 
     public void setSender(User fromUser) {
@@ -116,7 +123,7 @@ public class Email {
         this.messageBody = messageBody;
     }
 
-    private void setCreationTime() {
+    public void setCreationTime(LocalDate now) {
         this.creationTime = LocalDate.now();
     }
 }

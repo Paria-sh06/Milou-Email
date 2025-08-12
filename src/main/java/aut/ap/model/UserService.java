@@ -33,13 +33,15 @@ public class UserService {
     public static User getUserByEmail(String email) {
         AtomicReference<User> ref = new AtomicReference<>();
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "FROM User WHERE email = :email";
+            String hql = "FROM User u WHERE u.emailAddress = :email";
             Query<User> query = session.createQuery(hql, User.class);
             query.setParameter("email", email);
             ref.set(query.uniqueResult());
         });
         return ref.get();
     }
+
+
 
     private static String normalizeEmail(String email) {
         email = email.trim();

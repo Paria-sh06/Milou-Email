@@ -10,7 +10,7 @@ create table Emails(
     uniquecode nvarchar(6) not null unique,
     sender_id int not null,
     title TINYTEXT not null,
-    massageBody TEXT,
+    messageBody TEXT,
     creation_time datetime not null,
     foreign key (sender_id) references User(userId)
 );
@@ -23,3 +23,5 @@ create table Email_Recipients(
     foreign key (recipient_id) references User(userId),
     foreign key (email_id) references Emails(emailId)
 );
+drop table Email_Recipients, Emails;
+show tables;

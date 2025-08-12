@@ -1,9 +1,10 @@
 package aut.ap.model;
 
+import aut.ap.framework.SingletonSessionFactory;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
-import aut.ap.framework.*;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,7 +47,7 @@ public class EmailService {
 
     public static void allEmails(User user) {
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "SELECT DISTINCT r.relatedEmail FROM EmailRecipient r WHERE r.receiverUser = :user";
+            String hql = "SELECT DISTINCT r.relatedEmail FROM EmailRecipient r WHERE r.recipient = :user";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("user", user);
 
@@ -68,7 +69,7 @@ public class EmailService {
     public static void unreadEmails(User user) {
         AtomicReference<List<Email>> emails = new AtomicReference<>(new ArrayList<>());
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "SELECT r.email FROM EmailRecipient r WHERE r.recipient = :user AND r.isRead = false";
+            String hql = "SELECT r.relatedEmail FROM EmailRecipient r WHERE r.recipient = :user AND r.readStatus = false";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("user", user);
             emails.set(query.getResultList());
@@ -96,7 +97,7 @@ public class EmailService {
 
             System.out.println(emails.size() + " Sent Emails:");
 
-            String hqlAllRecipients = "FROM EmailRecipient r WHERE r.email IN :emails";
+            String hqlAllRecipients = "FROM EmailRecipient r WHERE r.relatedEmail IN :emails";
             Query<EmailRecipient> recQuery = session.createQuery(hqlAllRecipients, EmailRecipient.class);
             recQuery.setParameter("emails", emails);
             List<EmailRecipient> allRecipients = recQuery.getResultList();
@@ -123,50 +124,56 @@ public class EmailService {
 
     public static void reply(User user, String code, String replyBody) {
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "FROM Email e WHERE e.code = :code";
+            String hql = "FROM Email e WHERE e.uniqueCode = :code";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("code", code);
 
-            Email email;
+            Email originalEmail;
             try {
-                email = query.getSingleResult();
+                originalEmail = query.getSingleResult();
             } catch (Exception e) {
                 throw new IllegalArgumentException("No such email with code: " + code);
             }
 
-            List<EmailRecipient> recipients = getRecipientsOfEmail(session, email);
+            List<EmailRecipient> recipients = getRecipientsOfEmail(session, originalEmail);
 
-            boolean isReply = false;
-            List<String> recipientEmails = new ArrayList<>();
+            boolean isReplyAllowed = false;
 
             for (EmailRecipient recipient : recipients) {
-                String emailAddress = recipient.getRecipient().getEmailAddress();
-
-                if (emailAddress.equals(user.getEmailAddress())) {
-                    emailAddress = email.getSender().getEmailAddress();
-                    isReply = true;
+                if (recipient.getRecipient().getEmailAddress().equals(user.getEmailAddress())) {
                     recipient.setReadStatus(true);
                     session.merge(recipient);
+                    isReplyAllowed = true;
+                    break;
                 }
-
-                recipientEmails.add(emailAddress);
             }
 
-            if (!isReply && !email.getSender().getEmailAddress().equals(user.getEmailAddress())) {
+            if (!isReplyAllowed && !originalEmail.getSender().getEmailAddress().equals(user.getEmailAddress())) {
                 throw new IllegalArgumentException("You cannot reply to this email.");
             }
 
-            String replySubject = "[Re] " + email.getTitle();
-            Email replyEmail = send(user, String.join(", ", recipientEmails), replySubject, replyBody);
+            Email replyEmail = new Email();
+            replyEmail.setSender(user);
+            replyEmail.setTitle("Re: " + originalEmail.getTitle());
+            replyEmail.setMessageBody(replyBody);
+            replyEmail.setCreationTime(LocalDate.now());
 
-            System.out.println("Successfully sent your reply to email " + code + ".");
-            System.out.println("Code: " + replyEmail.getUniqueCode());
+            replyEmail.setRecipients(originalEmail.getSender().getEmailAddress());
+
+            session.persist(replyEmail);
+
+            EmailRecipient emailRecipient = new EmailRecipient();
+            emailRecipient.setRelatedEmail(replyEmail);
+            emailRecipient.setRecipient(originalEmail.getSender());
+            emailRecipient.setReadStatus(false);
+            session.persist(emailRecipient);
         });
     }
 
+
     public static void forward(User user, String code, String forwardRecipients) {
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "FROM Email e WHERE e.code = :code";
+            String hql = "FROM Email e WHERE e.uniqueCode = :code";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("code", code);
 
@@ -203,7 +210,7 @@ public class EmailService {
 
     public static void readByUniqeCode(User user, String code) {
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "FROM Email e WHERE e.code = :code";
+            String hql = "FROM Email e WHERE e.uniqueCode = :code";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("code", code);
 
@@ -244,7 +251,7 @@ public class EmailService {
     }
     
     private static List<EmailRecipient> getRecipientsOfEmail(Session session, Email email) {
-        String hqlRecipients = "FROM EmailRecipient r WHERE r.email = :email";
+        String hqlRecipients = "FROM EmailRecipient r WHERE r.relatedEmail = :email";
         Query<EmailRecipient> recipientQuery = session.createQuery(hqlRecipients, EmailRecipient.class);
         recipientQuery.setParameter("email", email);
         return recipientQuery.getResultList();
