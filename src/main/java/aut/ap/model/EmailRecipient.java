@@ -50,7 +50,7 @@ public class EmailRecipient {
         this.readStatus = readStatus;
     }
 
-    public Boolean getReadStatus() {
+    public Boolean setReadStatus() {
         return readStatus;
     }
 
