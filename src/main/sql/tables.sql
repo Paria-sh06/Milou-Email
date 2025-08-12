@@ -4,3 +4,13 @@ create table User(
     emailAddress nvarchar(250) not null unique,
     password nvarchar(250) not null
 );
+
+create table Emails(
+    emailId int primary key auto_increment,
+    uniquecode nvarchar(6) not null unique,
+    sender_id int not null,
+    title TINYTEXT not null,
+    massageBody TEXT,
+    creation_time datetime not null,
+    foreign key (sender_id) references User(userId)
+);
