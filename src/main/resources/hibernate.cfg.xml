@@ -9,8 +9,7 @@
             com.mysql.cj.jdbc.Driver
         </property>
         <property name="hibernate.connection.url">
-            jdbc:mysql://etna.liara.cloud:30974/final_email
-        </property>
+            jdbc:mysql://etna.liara.cloud:30974/final_milou        </property>
         <property name="hibernate.connection.username">
             root
         </property>
@@ -18,9 +17,9 @@
             ZJTnmKZigtPgFXG0KYFV7lNA
         </property>
         <!-- Hibernate settings -->
-        <property name="hibernate.show_sql">true</property>
-        <property name="hibernate.format_sql">true</property>
-        <property name="hibernate.highlight_sql">true</property>
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">false</property>
+        <property name="hibernate.highlight_sql">false</property>
         <!-- Mappings -->
         <mapping class="aut.ap.model.User"/>
         <mapping class="aut.ap.model.UserService"/>

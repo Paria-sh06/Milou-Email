@@ -1,1 +1,1 @@
-create database final_email;
+create database final_milou;

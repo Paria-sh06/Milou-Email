@@ -23,5 +23,3 @@ create table Email_Recipients(
     foreign key (recipient_id) references User(userId),
     foreign key (email_id) references Emails(emailId)
 );
-drop table Email_Recipients, Emails;
-show tables;
