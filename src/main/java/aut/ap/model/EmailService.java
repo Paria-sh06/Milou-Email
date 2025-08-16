@@ -67,22 +67,22 @@ public class EmailService {
 
 
     public static void unreadEmails(User user) {
-        AtomicReference<List<Email>> emails = new AtomicReference<>(new ArrayList<>());
         SingletonSessionFactory.get().inTransaction(session -> {
             String hql = "SELECT r.relatedEmail FROM EmailRecipient r WHERE r.recipient = :user AND r.readStatus = false";
             Query<Email> query = session.createQuery(hql, Email.class);
             query.setParameter("user", user);
-            emails.set(query.getResultList());
 
-            if (emails.get().isEmpty()) {
+            List<Email> emails = query.getResultList();
+
+            if (emails.isEmpty()) {
                 System.out.println("No emails found.");
-                return;
+            } else {
+                System.out.println(emails.size() + " Unread Emails:");
+                printEmails(emails);
             }
-
-            System.out.println(emails.get().size() + " Unread Emails:");
-            printEmails(emails.get());
         });
     }
+
     public static void sentEmails(User user) {
         SingletonSessionFactory.get().inTransaction(session -> {
             String hqlEmails = "FROM Email e WHERE e.sender = :user";
@@ -173,30 +173,23 @@ public class EmailService {
 
     public static void forward(User user, String code, String forwardRecipients) {
         SingletonSessionFactory.get().inTransaction(session -> {
-            String hql = "FROM Email e WHERE e.uniqueCode = :code";
-            Query<Email> query = session.createQuery(hql, Email.class);
-            query.setParameter("code", code);
-
-            Email email;
-            try {
-                email = query.getSingleResult();
-            } catch (Exception e) {
-                throw new IllegalArgumentException("No such email with code: " + code);
-            }
+            Email email = session.createQuery(
+                            "FROM Email e WHERE e.uniqueCode = :code", Email.class)
+                    .setParameter("code", code)
+                    .uniqueResultOptional()
+                    .orElseThrow(() -> new IllegalArgumentException("No such email with code: " + code));
 
             List<EmailRecipient> recipients = getRecipientsOfEmail(session, email);
+            boolean hasAccess = recipients.stream()
+                    .filter(r -> r.getRecipient().getEmailAddress().equals(user.getEmailAddress()))
+                    .peek(r -> {
+                        r.setReadStatus(true);
+                        session.merge(r);
+                    })
+                    .findFirst()
+                    .isPresent();
 
-            boolean isForward = false;
-            for (EmailRecipient recipient : recipients) {
-                if (recipient.getRecipient().getEmailAddress().equals(user.getEmailAddress())) {
-                    recipient.setReadStatus(true);
-                    session.merge(recipient);
-                    isForward = true;
-                    break;
-                }
-            }
-
-            if (!isForward && !email.getSender().getEmailAddress().equals(user.getEmailAddress())) {
+            if (!hasAccess && !email.getSender().getEmailAddress().equals(user.getEmailAddress())) {
                 throw new IllegalArgumentException("You cannot forward this email.");
             }
 
@@ -207,6 +200,7 @@ public class EmailService {
             System.out.println("Code: " + forwardEmail.getUniqueCode());
         });
     }
+
 
     public static void readByUniqeCode(User user, String code) {
         SingletonSessionFactory.get().inTransaction(session -> {
